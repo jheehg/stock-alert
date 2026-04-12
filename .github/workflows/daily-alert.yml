@@ -2,7 +2,7 @@ name: Daily Stock Alert
 
 on:
   schedule:
-    - cron: '45 6 * * *'  # 테스트용 - 원래: '30 7 * * 1-5'
+    - cron: '30 7 * * 1-5'  # UTC 07:30 = KST 16:30, 평일만
   workflow_dispatch:  # 수동 실행 가능
 
 jobs:
