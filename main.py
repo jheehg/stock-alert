@@ -16,18 +16,23 @@ def is_korean_holiday(date: datetime) -> bool:
 
 
 def main() -> None:
-    today = datetime.now()
+    # 날짜 인자: python main.py 20260413 (없으면 오늘)
+    if len(sys.argv) > 1:
+        today_str = sys.argv[1]
+        today = datetime.strptime(today_str, "%Y%m%d")
+    else:
+        today = datetime.now()
+        today_str = today.strftime("%Y%m%d")
 
     # 주말/공휴일 체크
     if today.weekday() >= 5:
-        print("오늘은 주말입니다. 종료합니다.")
+        print("주말입니다. 종료합니다.")
         return
 
     if is_korean_holiday(today):
-        print("오늘은 공휴일입니다. 종료합니다.")
+        print("공휴일입니다. 종료합니다.")
         return
 
-    today_str = today.strftime("%Y%m%d")
     print(f"[{today_str}] Stock Alert 시작")
 
     try:
