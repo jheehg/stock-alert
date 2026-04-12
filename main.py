@@ -18,7 +18,11 @@ def is_korean_holiday(date: datetime) -> bool:
 def main() -> None:
     today = datetime.now()
 
-    # 공휴일 체크
+    # 주말/공휴일 체크
+    if today.weekday() >= 5:
+        print("오늘은 주말입니다. 종료합니다.")
+        return
+
     if is_korean_holiday(today):
         print("오늘은 공휴일입니다. 종료합니다.")
         return
