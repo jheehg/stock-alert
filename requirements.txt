@@ -1,0 +1,6 @@
+pykrx>=1.0.45
+pandas>=2.0.0
+python-telegram-bot>=20.0
+python-dotenv>=1.0.0
+holidays>=0.50
+pytest>=7.0.0
