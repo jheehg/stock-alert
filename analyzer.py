@@ -71,3 +71,58 @@ def filter_sell_candidates(df: pd.DataFrame) -> pd.DataFrame:
         & (df["거래량비율"] >= config.VOLUME_RATIO_MIN)
     )
     return df[mask].sort_values("거래량비율", ascending=False).head(config.MAX_CANDIDATES)
+
+
+def analyze_stock(df: pd.DataFrame) -> pd.DataFrame:
+    """단일 종목에 모든 지표를 계산하여 반환."""
+    df = calculate_moving_averages(df)
+    df = calculate_rsi(df)
+    df = calculate_volume_ratio(df)
+    df = detect_cross_signals(df)
+    return df
+
+
+def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
+    """전체 종목 분석 후 매수/매도 후보 반환.
+
+    Returns:
+        {
+            "buy": [{"ticker": "005930", "rsi": 42.3, ...}, ...],
+            "sell": [...]
+        }
+    """
+    all_last_rows = []
+
+    for ticker, df in stock_data.items():
+        try:
+            analyzed = analyze_stock(df)
+            if analyzed.empty:
+                continue
+            last_row = analyzed.iloc[-1].copy()
+            last_row["ticker"] = ticker
+            all_last_rows.append(last_row)
+        except Exception:
+            continue
+
+    if not all_last_rows:
+        return {"buy": [], "sell": []}
+
+    combined = pd.DataFrame(all_last_rows)
+
+    buy_df = filter_buy_candidates(combined)
+    sell_df = filter_sell_candidates(combined)
+
+    def to_list(df: pd.DataFrame) -> list[dict]:
+        records = []
+        for _, row in df.iterrows():
+            records.append({
+                "ticker": row["ticker"],
+                "rsi": round(row["RSI"], 1),
+                "volume_ratio": round(row["거래량비율"], 1),
+                "golden_cross": bool(row.get("골든크로스", False)),
+                "dead_cross": bool(row.get("데드크로스", False)),
+                "close": int(row["종가"]),
+            })
+        return records
+
+    return {"buy": to_list(buy_df), "sell": to_list(sell_df)}

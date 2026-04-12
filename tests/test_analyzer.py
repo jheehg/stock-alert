@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from analyzer import calculate_moving_averages, calculate_rsi, calculate_volume_ratio
 from analyzer import detect_cross_signals, filter_buy_candidates, filter_sell_candidates
+from analyzer import analyze_stock, analyze_all
 
 
 def make_sample_df(prices: list[float], volumes: list[int]) -> pd.DataFrame:
@@ -116,3 +117,28 @@ def test_filter_sell_candidates():
     })
     result = filter_sell_candidates(df)
     assert len(result) == 2  # 데드크로스+거래량 OK, RSI>=70+거래량 OK
+
+
+def test_analyze_stock():
+    """단일 종목 분석: 모든 지표 컬럼이 추가되는지 확인"""
+    prices = list(range(100, 170))
+    volumes = [1000] * 70
+    df = make_sample_df(prices, volumes)
+
+    result = analyze_stock(df)
+    expected_cols = {"MA5", "MA20", "MA60", "RSI", "거래량비율", "골든크로스", "데드크로스"}
+    assert expected_cols.issubset(set(result.columns))
+
+
+def test_analyze_all_returns_candidates():
+    """전체 분석 결과가 매수/매도 후보 딕셔너리를 반환하는지 확인"""
+    prices = list(range(100, 170))
+    volumes = [1000] * 70
+    df = make_sample_df(prices, volumes)
+    stock_data = {"005930": df}
+
+    result = analyze_all(stock_data)
+    assert "buy" in result
+    assert "sell" in result
+    assert isinstance(result["buy"], list)
+    assert isinstance(result["sell"], list)
