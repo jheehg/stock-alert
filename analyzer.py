@@ -39,3 +39,35 @@ def calculate_volume_ratio(df: pd.DataFrame) -> pd.DataFrame:
     avg_volume = df["거래량"].shift(1).rolling(window=config.VOLUME_AVG_DAYS).mean()
     df["거래량비율"] = df["거래량"] / avg_volume
     return df
+
+
+def detect_cross_signals(df: pd.DataFrame) -> pd.DataFrame:
+    """골든크로스/데드크로스 bool 컬럼 추가."""
+    df = df.copy()
+    prev_above = df["MA5"].shift(1) > df["MA20"].shift(1)
+    curr_above = df["MA5"] > df["MA20"]
+
+    df["골든크로스"] = (~prev_above) & curr_above
+    df["데드크로스"] = prev_above & (~curr_above)
+    return df
+
+
+def filter_buy_candidates(df: pd.DataFrame) -> pd.DataFrame:
+    """매수 후보 필터링: 골든크로스 AND RSI 범위 AND 거래량 조건."""
+    rsi_min, rsi_max = config.RSI_BUY_RANGE
+    mask = (
+        df["골든크로스"]
+        & (df["RSI"] >= rsi_min)
+        & (df["RSI"] <= rsi_max)
+        & (df["거래량비율"] >= config.VOLUME_RATIO_MIN)
+    )
+    return df[mask].sort_values("거래량비율", ascending=False).head(config.MAX_CANDIDATES)
+
+
+def filter_sell_candidates(df: pd.DataFrame) -> pd.DataFrame:
+    """매도 후보 필터링: (데드크로스 OR RSI>=70) AND 거래량 조건."""
+    mask = (
+        (df["데드크로스"] | (df["RSI"] >= config.RSI_SELL_THRESHOLD))
+        & (df["거래량비율"] >= config.VOLUME_RATIO_MIN)
+    )
+    return df[mask].sort_values("거래량비율", ascending=False).head(config.MAX_CANDIDATES)

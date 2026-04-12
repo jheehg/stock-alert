@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from analyzer import calculate_moving_averages, calculate_rsi, calculate_volume_ratio
+from analyzer import detect_cross_signals, filter_buy_candidates, filter_sell_candidates
 
 
 def make_sample_df(prices: list[float], volumes: list[int]) -> pd.DataFrame:
@@ -59,3 +60,59 @@ def test_calculate_volume_ratio():
     assert "거래량비율" in result.columns
     # 마지막날: 3000 / mean(1000*20) = 3.0
     assert abs(result["거래량비율"].iloc[-1] - 3.0) < 0.01
+
+
+def test_detect_golden_cross():
+    """MA5가 MA20을 상향 돌파하면 골든크로스 감지"""
+    df = pd.DataFrame({
+        "MA5": [95, 98, 101, 103],
+        "MA20": [100, 100, 100, 100],
+    })
+    result = detect_cross_signals(df)
+    assert result["골든크로스"].iloc[2] == True
+    assert result["데드크로스"].iloc[2] == False
+
+
+def test_detect_dead_cross():
+    """MA5가 MA20을 하향 돌파하면 데드크로스 감지"""
+    df = pd.DataFrame({
+        "MA5": [105, 102, 99, 97],
+        "MA20": [100, 100, 100, 100],
+    })
+    result = detect_cross_signals(df)
+    assert result["데드크로스"].iloc[2] == True
+    assert result["골든크로스"].iloc[2] == False
+
+
+def test_filter_buy_candidates():
+    """골든크로스 + RSI 30~50 + 거래량 150% 이상이면 매수 후보"""
+    df = pd.DataFrame({
+        "골든크로스": [False, True],
+        "RSI": [60, 42.0],
+        "거래량비율": [1.0, 2.3],
+    })
+    result = filter_buy_candidates(df)
+    assert len(result) == 1
+    assert result.iloc[0]["RSI"] == 42.0
+
+
+def test_filter_buy_excludes_low_volume():
+    """거래량 150% 미만이면 매수 후보에서 제외"""
+    df = pd.DataFrame({
+        "골든크로스": [True],
+        "RSI": [42.0],
+        "거래량비율": [1.2],
+    })
+    result = filter_buy_candidates(df)
+    assert len(result) == 0
+
+
+def test_filter_sell_candidates():
+    """(데드크로스 OR RSI>=70) AND 거래량 150% 이상이면 매도 후보"""
+    df = pd.DataFrame({
+        "데드크로스": [True, False, False],
+        "RSI": [50, 75, 75],
+        "거래량비율": [2.0, 1.8, 1.2],
+    })
+    result = filter_sell_candidates(df)
+    assert len(result) == 2  # 데드크로스+거래량 OK, RSI>=70+거래량 OK
