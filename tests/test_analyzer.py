@@ -98,25 +98,25 @@ def test_filter_buy_candidates():
 
 
 def test_filter_buy_excludes_low_volume():
-    """거래량 150% 미만이면 매수 후보에서 제외"""
+    """거래량 120% 미만이면 매수 후보에서 제외"""
     df = pd.DataFrame({
         "골든크로스": [True],
         "RSI": [42.0],
-        "거래량비율": [1.2],
+        "거래량비율": [1.1],
     })
     result = filter_buy_candidates(df)
     assert len(result) == 0
 
 
 def test_filter_sell_candidates():
-    """(데드크로스 OR RSI>=70) AND 거래량 150% 이상이면 매도 후보"""
+    """(데드크로스 OR RSI>=70) AND 거래량 120% 이상이면 매도 후보"""
     df = pd.DataFrame({
         "데드크로스": [True, False, False],
         "RSI": [50, 75, 75],
         "거래량비율": [2.0, 1.8, 1.2],
     })
     result = filter_sell_candidates(df)
-    assert len(result) == 2  # 데드크로스+거래량 OK, RSI>=70+거래량 OK
+    assert len(result) == 3  # 전부 거래량 120% 이상
 
 
 def test_analyze_stock():

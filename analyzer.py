@@ -100,6 +100,14 @@ def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
                 continue
             last_row = analyzed.iloc[-1].copy()
             last_row["ticker"] = ticker
+
+            # 골든크로스/데드크로스: 최근 N일 이내 발생 여부로 확장
+            recent = analyzed.tail(config.GOLDEN_CROSS_DAYS)
+            if recent["골든크로스"].any():
+                last_row["골든크로스"] = True
+            if recent["데드크로스"].any():
+                last_row["데드크로스"] = True
+
             all_last_rows.append(last_row)
         except Exception:
             continue
