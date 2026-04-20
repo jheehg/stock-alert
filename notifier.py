@@ -53,7 +53,7 @@ def format_message(
         lines.append("")
 
     if sell:
-        lines.append(f"📉 매도 후보 ({len(sell)}종목)")
+        lines.append(f"📉 보유 종목 매도 신호 ({len(sell)}종목)")
         for i, item in enumerate(sell, 1):
             signals = []
             if item["dead_cross"]:

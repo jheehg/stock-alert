@@ -21,6 +21,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Write holdings.json from secret
+        env:
+          HOLDINGS_JSON: ${{ secrets.HOLDINGS_JSON }}
+        run: |
+          if [ -n "$HOLDINGS_JSON" ]; then
+            printf '%s' "$HOLDINGS_JSON" > holdings.json
+            echo "holdings.json written ($(wc -c < holdings.json) bytes)"
+          else
+            echo "HOLDINGS_JSON secret is empty — skipping"
+          fi
+
       - name: Run stock alert
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

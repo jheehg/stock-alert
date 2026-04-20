@@ -103,8 +103,14 @@ def analyze_stock(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
+def analyze_all(
+    stock_data: dict[str, pd.DataFrame],
+    holdings: list[str] | None = None,
+) -> dict[str, list[dict]]:
     """전체 종목 분석 후 매수/매도 후보 반환.
+
+    매수: 전체 유니버스에서 필터.
+    매도: holdings 내 종목에서만 필터. holdings 비어있으면 매도 후보는 빈 리스트.
 
     Returns:
         {
@@ -112,6 +118,7 @@ def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
             "sell": [...]
         }
     """
+    holdings_set = set(holdings or [])
     all_last_rows = []
     support_map: dict[str, float | None] = {}
 
@@ -141,7 +148,11 @@ def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
     combined = pd.DataFrame(all_last_rows)
 
     buy_df = filter_buy_candidates(combined)
-    sell_df = filter_sell_candidates(combined)
+    if holdings_set:
+        holdings_df = combined[combined["ticker"].isin(holdings_set)]
+        sell_df = filter_sell_candidates(holdings_df)
+    else:
+        sell_df = combined.iloc[0:0]  # 빈 DataFrame
 
     def to_list(df: pd.DataFrame, include_trade_levels: bool) -> list[dict]:
         records = []

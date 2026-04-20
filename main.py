@@ -4,7 +4,12 @@ from datetime import datetime
 
 import holidays
 
-from collector import filter_by_market_cap, collect_stock_data, get_ticker_name
+from collector import (
+    filter_by_market_cap,
+    collect_stock_data,
+    get_ticker_name,
+    load_holdings,
+)
 from analyzer import analyze_all
 from notifier import send_alert, send_error
 
@@ -42,7 +47,8 @@ def main() -> None:
         if not tickers:
             send_error("시가총액 필터링 결과 종목이 없습니다.")
             return
-        print(f"대상 종목: {len(tickers)}개")
+        holdings = load_holdings()
+        print(f"대상 종목: {len(tickers)}개 / 보유 종목: {len(holdings)}개")
 
         print("일봉 데이터 수집 중...")
         stock_data, failed_count = collect_stock_data(tickers, today_str)
@@ -53,7 +59,7 @@ def main() -> None:
 
         # 2. 분석
         print("분석 중...")
-        candidates = analyze_all(stock_data)
+        candidates = analyze_all(stock_data, holdings=holdings)
 
         # 종목명 추가
         for category in ["buy", "sell"]:

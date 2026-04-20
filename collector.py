@@ -1,4 +1,6 @@
 # collector.py
+import json
+import os
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -6,6 +8,23 @@ import FinanceDataReader as fdr
 from pykrx import stock
 
 import config
+
+
+HOLDINGS_FILE = "holdings.json"
+
+
+def load_holdings() -> list[str]:
+    """holdings.json에서 보유 종목 티커 리스트 로드. 파일 없으면 빈 리스트."""
+    if not os.path.exists(HOLDINGS_FILE):
+        return []
+    try:
+        with open(HOLDINGS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return [str(t).zfill(6) for t in data if t]
 
 
 # 종목 리스트 캐시 (실행당 1회만 조회)
