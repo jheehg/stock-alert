@@ -52,6 +52,27 @@ def detect_cross_signals(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def calculate_support_level(df: pd.DataFrame) -> float | None:
+    """현재가 아래에서 가장 가까운 지지선 추정.
+
+    후보: 최근 N일 저가 최저값, MA20
+    두 후보 중 현재가 아래에 있는 값들 중 최대값(가장 근접한 지지).
+    후보가 없으면 None.
+    """
+    if df.empty:
+        return None
+
+    last_close = df["종가"].iloc[-1]
+    lookback = df.tail(config.SUPPORT_LOOKBACK)
+    recent_low = lookback["저가"].min() if "저가" in df.columns else lookback["종가"].min()
+    ma20 = df["MA20"].iloc[-1] if "MA20" in df.columns else np.nan
+
+    candidates = [c for c in (recent_low, ma20) if pd.notna(c) and c < last_close]
+    if not candidates:
+        return None
+    return float(max(candidates))
+
+
 def filter_buy_candidates(df: pd.DataFrame) -> pd.DataFrame:
     """매수 후보 필터링: 골든크로스 AND RSI 범위 AND 거래량 조건."""
     rsi_min, rsi_max = config.RSI_BUY_RANGE
@@ -92,6 +113,7 @@ def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
         }
     """
     all_last_rows = []
+    support_map: dict[str, float | None] = {}
 
     for ticker, df in stock_data.items():
         try:
@@ -108,6 +130,7 @@ def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
             if recent["데드크로스"].any():
                 last_row["데드크로스"] = True
 
+            support_map[ticker] = calculate_support_level(analyzed)
             all_last_rows.append(last_row)
         except Exception:
             continue
@@ -120,17 +143,28 @@ def analyze_all(stock_data: dict[str, pd.DataFrame]) -> dict[str, list[dict]]:
     buy_df = filter_buy_candidates(combined)
     sell_df = filter_sell_candidates(combined)
 
-    def to_list(df: pd.DataFrame) -> list[dict]:
+    def to_list(df: pd.DataFrame, include_trade_levels: bool) -> list[dict]:
         records = []
         for _, row in df.iterrows():
-            records.append({
-                "ticker": row["ticker"],
+            ticker = row["ticker"]
+            close = int(row["종가"])
+            record = {
+                "ticker": ticker,
                 "rsi": round(row["RSI"], 1),
                 "volume_ratio": round(row["거래량비율"], 1),
                 "golden_cross": bool(row.get("골든크로스", False)),
                 "dead_cross": bool(row.get("데드크로스", False)),
-                "close": int(row["종가"]),
-            })
+                "close": close,
+            }
+            if include_trade_levels:
+                support = support_map.get(ticker)
+                record["support"] = int(support) if support is not None else None
+                record["stop_loss"] = int(round(close * (1 - config.STOP_LOSS_PCT)))
+                record["take_profit"] = int(round(close * (1 + config.TAKE_PROFIT_PCT)))
+            records.append(record)
         return records
 
-    return {"buy": to_list(buy_df), "sell": to_list(sell_df)}
+    return {
+        "buy": to_list(buy_df, include_trade_levels=True),
+        "sell": to_list(sell_df, include_trade_levels=False),
+    }

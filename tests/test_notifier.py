@@ -6,7 +6,8 @@ def test_format_message_with_candidates():
     candidates = {
         "buy": [
             {"ticker": "005930", "name": "삼성전자", "rsi": 42.3, "volume_ratio": 2.3,
-             "golden_cross": True, "dead_cross": False, "close": 71000},
+             "golden_cross": True, "dead_cross": False, "close": 71000,
+             "support": 69000, "stop_loss": 68870, "take_profit": 75260},
         ],
         "sell": [
             {"ticker": "000660", "name": "SK하이닉스", "rsi": 75.2, "volume_ratio": 1.8,

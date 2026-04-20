@@ -45,11 +45,11 @@ def main() -> None:
         print(f"대상 종목: {len(tickers)}개")
 
         print("일봉 데이터 수집 중...")
-        stock_data = collect_stock_data(tickers, today_str)
+        stock_data, failed_count = collect_stock_data(tickers, today_str)
         if not stock_data:
             send_error("일봉 데이터 수집에 실패했습니다.")
             return
-        print(f"수집 완료: {len(stock_data)}개")
+        print(f"수집 완료: {len(stock_data)}개 (실패: {failed_count}개)")
 
         # 2. 분석
         print("분석 중...")
@@ -64,7 +64,8 @@ def main() -> None:
 
         # 3. 텔레그램 발송
         print("텔레그램 발송 중...")
-        send_alert(candidates)
+        stats = {"total": len(tickers), "failed": failed_count}
+        send_alert(candidates, stats=stats)
         print("완료!")
 
     except Exception as e:
